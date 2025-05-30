@@ -1,0 +1,86 @@
+import 'package:flutter/material.dart'; import 'package:http/http.dart' as http; import 'dart:convert';
+
+void main() => runApp(FantasyGeniusApp());
+
+class FantasyGeniusApp extends StatelessWidget { @override Widget build(BuildContext context) { return MaterialApp( title: 'Fantasy Genius', theme: ThemeData.dark().copyWith( colorScheme: ColorScheme.dark( primary: Colors.redAccent, secondary: Colors.amberAccent, ), ), home: FantasyHomePage(), ); } }
+
+class FantasyHomePage extends StatefulWidget { @override _FantasyHomePageState createState() => _FantasyHomePageState(); }
+
+class _FantasyHomePageState extends State<FantasyHomePage> { List<dynamic> bestTeam = []; String captain = ''; String viceCaptain = ''; bool isLoading = false;
+
+Future<void> fetchBestTeam(String matchId) async { setState(() => isLoading = true); final url = Uri.parse('http://localhost:5000/get_team?match=$matchId'); final response = await http.get(url);
+
+if (response.statusCode == 200) {
+  final data = json.decode(response.body);
+  setState(() {
+    bestTeam = data['best_team'];
+    captain = data['captain'];
+    viceCaptain = data['vice_captain'];
+    isLoading = false;
+  });
+} else {
+  setState(() => isLoading = false);
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load team')));
+}
+
+}
+
+@override Widget build(BuildContext context) { TextEditingController matchController = TextEditingController();
+
+return Scaffold(
+  appBar: AppBar(
+    title: Text('Fantasy Genius'),
+  ),
+  body: Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: Column(
+      children: [
+        TextField(
+          controller: matchController,
+          decoration: InputDecoration(
+            labelText: 'Enter Match ID (e.g., ind-vs-aus)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: () => fetchBestTeam(matchController.text.trim()),
+          child: Text('Get Best Playing 11'),
+        ),
+        SizedBox(height: 16),
+        if (isLoading) CircularProgressIndicator(),
+        if (bestTeam.isNotEmpty)
+          Expanded(
+            child: ListView.builder(
+              itemCount: bestTeam.length,
+              itemBuilder: (context, index) {
+                final player = bestTeam[index];
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    leading: Icon(Icons.sports_cricket),
+                    title: Text(player['name']),
+                    subtitle: Text(
+                      '${player['role'].toUpperCase()} | Form: ${player['form']} | Credit: ${player['credit']}',
+                    ),
+                    trailing: Text(
+                      player['name'] == captain
+                          ? 'C'
+                          : player['name'] == viceCaptain
+                              ? 'VC'
+                              : '',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    ),
+  ),
+);
+
+} }
+
+  
